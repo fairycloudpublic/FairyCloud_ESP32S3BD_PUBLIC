@@ -1,2 +1,2 @@
 # FairyCloud_ESP32S3BD_PUBLIC
-ESP32S3物联网开发板，硬件代码
+ESP32S3物联网核心板，硬件代码
