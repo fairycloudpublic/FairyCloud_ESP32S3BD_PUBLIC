@@ -15,7 +15,9 @@ FairyCloud_ESP32S3BD_PUBLIC/code/
 FairyCloud_ESP32S3BD_PUBLIC/code/src/config.hpp
 
 String appkey  ="XXX";
+
 String secretkey  ="XXX";
+
 String getsrccid_url = "XXX";
 
 
@@ -23,11 +25,17 @@ String getsrccid_url = "XXX";
 说明：设备连接的WiFi名称和密码，支持多个WiFi账号设置，哪个能连上就连接哪个
 
 const char *wifiData[][2] = {
+
     {"Gunter", "{qwerty123}"}, 
+
     {"CMCC-AKtZ", "0102030405"},
+
     {"Fairy", "{qwerty123}"},
+
     {"XXX", "XXX"},
+
     // 继续添加需要的 Wi-Fi 名称和密码
+
 };
 
 
