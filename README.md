@@ -6,6 +6,9 @@ ESP32S3BD物联网开发板-硬件代码；欢迎交流：QQ群：630017549 ，�
 ### 代码目录
 FairyCloud_ESP32S3BD_PUBLIC/code/
 
+### 开发工具
+VSCode + PlatformIO
+
 
 ### 配置文件说明
 
