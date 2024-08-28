@@ -19,40 +19,42 @@
 LightUtils utils;
 
 
-
-#include <TFT_eSPI.h> // ST7735驱动芯片的图形和字体库
+// ST7735驱动芯片的图形和字体库
+#include <TFT_eSPI.h> 
 #include <SPI.h>
  
-TFT_eSPI tft = TFT_eSPI(); // 调用库，引脚在User_Setup.h中定义
+// 调用库，引脚在User_Setup.h中定义
+TFT_eSPI tft = TFT_eSPI(); 
  
 void ftf_display(void);
 void alarmAction(void);
 
+// 自动化任务 列表
 JsonArray combineAutoArr ;
- StaticJsonDocument<1024*10> docauto;
- boolean combineAutoArrFlag = false;
+// 解析自动化任务缓存
+StaticJsonDocument<1024*10> docauto;
+// 自动化任务列表显示的flag
+boolean combineAutoArrFlag = false;
 
 
-//  监听需求总数
+// 自动化任务数量
  int8_t demand_count = 0;
+// 是否马上拉取自动化任务的flag
 boolean getCombinemonitorFlag = false;
 
 
 void combinecontrollFunc(JsonArray cmdcombine);
 void combinemonitorFunc(JsonArray cmdcombine);
 void getCombineAutoByCidHardware(String cid);
-// 红外 自定义发射 
+
+// 红外 自定义发射 -空调ac控制--海尔空调
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <ir_Haier.h>
-
 IRHaierACYRW02 haier_ac(kIrLed);
 
 #include <string.h>
 #define uint unsigned int
-
-TaskHandle_t TASK_HandleOne = NULL;
-TaskHandle_t TASK_HandleTwo = NULL;
 
 
 //温湿度定义
@@ -61,11 +63,8 @@ TaskHandle_t TASK_HandleTwo = NULL;
 // delay for half a second
 int delayval = 1000; 
 
-// 重启尝试次数
+// 重启设备--阈值
 int restartCount = 0; 
-
-
-int showType = 0;
 
 
 void videoUploadBegin(void);
@@ -88,8 +87,10 @@ void send_fotamsg(String fotastatus ,String toastmsg ,String loading ,u8_t loadi
 #include "cam_pins.h"
 
 
+
+
 /*
-   发送图片的UDP
+   发送图片的UDP的定义--摄像头相关
   */
 const uint16_t localUdpPort = 2333;
 LightUDP streamSender;
@@ -98,12 +99,14 @@ LightUDP streamSender;
  boolean cameraFlag = false;//视频开关状态
 
 
-boolean esp_restartFlag = false;//是否重启设备
-
-boolean autoUploadFlag = false;//是否自动上传视频的flag
-int tim1_Photo_count = 0;//十分钟拍一张图片 10s一次，默认60次后恢复0
-
-int fota_status = 0;//fota的状态
+// 重启设备flag标识
+boolean esp_restartFlag = false;
+// 是否自动上传视频的flag
+boolean autoUploadFlag = false;
+// 十分钟拍一张图片 10s一次，默认60次后恢复0
+int tim1_Photo_count = 0;
+//fota的状态
+int fota_status = 0;
 boolean fotaFlag = false;
 String updateurl= "";
 String updateversion= "";
@@ -134,7 +137,7 @@ const int daylightOffset_sec = 0;   //夏令时填写3600，否则填0
 
 
 
-
+// 连接WiFi网络
 void wifiConnect(const char *wifiData[][2], int numNetworks)
 {
     WiFi.disconnect(true);
@@ -169,17 +172,12 @@ void wifiConnect(const char *wifiData[][2], int numNetworks)
             Serial.println("Free Heap: " + String(ESP.getFreeHeap()));
             return; // 如果连接成功，退出函数
         }
-    }
-
-
-
-    
+    }  
 }
 
+// 获取自动化任务
 void getCombineAutoByCidHardware(String cid)
 {
-
-    /* code */
  
     HTTPClient http;
 
@@ -233,10 +231,13 @@ void getCombineAutoByCidHardware(String cid)
                     //自动拉取的flag
                     getCombinemonitorFlag = false;
                 
+                }else{
+                  Serial.printf("获取自动化任务失败1");
+                 
                 }
                    
         }else{
-          Serial.printf("获取CID失败延时5s");
+          Serial.printf("获取自动化任务失败2");
          
         }
     } else {
@@ -246,8 +247,7 @@ void getCombineAutoByCidHardware(String cid)
 
 }
 
-
-
+// 获取设备信息 
 void getDeviceByMac(String mac){
 
  uint8_t wifi_failedcount = 0;
@@ -380,24 +380,15 @@ void getDeviceByMac(String mac){
 
 }
 
-
-
-
-//当升级开始时，打印日志
+// 当升级开始时，打印日志
 void update_started() {
   totalProgress= -1;
   send_fotamsg("fota_started","升级开始","show",5,"--");
   Serial.println("CALLBACK:  HTTP update process started");
 }
 
-//当升级结束时，打印日志
-void update_finished() {
-  totalProgress= -1;
-    send_fotamsg("fota_finished","升级完成","hiden",0,"--");
-  Serial.println("CALLBACK:  HTTP update process finished");
-}
 
-//当升级中，打印日志
+// 当升级中，打印日志
 void update_progress(int cur, int total) {
   float aa = (float)cur;
   float bb = (float)total;
@@ -416,6 +407,14 @@ void update_progress(int cur, int total) {
   Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...%s...%d... \n", cur, total,progress,grs);
 }
 
+// 当升级结束时，打印日志
+void update_finished() {
+  totalProgress= -1;
+    send_fotamsg("fota_finished","升级完成","hiden",0,"--");
+  Serial.println("CALLBACK:  HTTP update process finished");
+}
+
+
 //当升级失败时，打印日志
 void update_error(int err) {
   totalProgress= -1;
@@ -423,6 +422,7 @@ void update_error(int err) {
   Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
 }
 
+// 升级信息上报
 void send_fotamsg(String fotastatus ,String toastmsg ,String loading ,u8_t loadingmaxtime ,String progress){
 
     StaticJsonDocument<1024> doc;
@@ -443,20 +443,18 @@ void send_fotamsg(String fotastatus ,String toastmsg ,String loading ,u8_t loadi
 
         
                 
-    String nonce = utils.md5str(reporttime +'0'+ random(1000));
-    doc["nonce"]= nonce;
+        String nonce = utils.md5str(reporttime +'0'+ random(1000));
+        doc["nonce"]= nonce;
 
-      TimeStruct stc =  utils.setClock(SRCCID);
+        TimeStruct stc =  utils.setClock(SRCCID);
 
-    int64_t signt = stc.timeStamp ;
+        int64_t signt = stc.timeStamp ;
 
-       doc["signt"] = (signt *1000)  ;
-    String cidstr = SRCCID;
+        doc["signt"] = (signt *1000)  ;
+        String cidstr = SRCCID;
     
-    String did = utils.md5str(reporttime +'0'+ random(1000));
+        String did = utils.md5str(reporttime +'0'+ random(1000));
         doc["did"] =  did;
-
-
 
 
         char  buffer[1024];
@@ -475,66 +473,60 @@ void send_fotamsg(String fotastatus ,String toastmsg ,String loading ,u8_t loadi
 
 }
 
+// 设备升级更新检测
 void updateDevice(String upUrl,String updateversion){
 
-  String ver = (String)version;
-  String newver = (String)updateversion;
-      Serial.println(ver); 
-      Serial.println(newver); 
+    String ver = (String)version;
+    String newver = (String)updateversion;
+    Serial.println(ver); 
+    Serial.println(newver); 
 
-  if (ver == newver)
-  {
-      Serial.println("version equal "); 
+    if (ver == newver)
+    {
+        Serial.println("version equal "); 
 
-       //FOTA开始的通知 mqtt 小程序提示
+        //FOTA开始的通知 mqtt 小程序提示
         send_fotamsg("fota_checked","已是最新版本","hiden",0,"--");
-
-      return ;
-  } else if ( upUrl == "")
-  {
+        return ;
+    } 
+    else if ( upUrl == ""){
 
        //FOTA开始的通知 mqtt 小程序提示
         send_fotamsg("fota_error","FOTA升级地址错误","hiden",0,"--");
 
-      Serial.println("url error"); 
-      return ;
-  }
+        Serial.println("url error"); 
+        return ;
+    }
 
 
+    //FOTA开始的通知 mqtt 小程序提示
+    String toast = "";
 
 
-  //FOTA开始的通知 mqtt 小程序提示
-      
-String toast = "";
+    Serial.println("start update");    
+    WiFiClient UpdateClient = client;
 
+    //如果是旧版esp32 SDK，需要删除下面四行，旧版不支持，不然会报错
+    httpUpdate.onStart(update_started);//当升级开始时
+    httpUpdate.onEnd(update_finished);//当升级结束时
+    httpUpdate.onProgress(update_progress);//当升级中
+    httpUpdate.onError(update_error);//当升级失败时
 
-  Serial.println("start update");    
-  WiFiClient UpdateClient = client;
-  
-  //如果是旧版esp32 SDK，需要删除下面四行，旧版不支持，不然会报错
-  httpUpdate.onStart(update_started);//当升级开始时
-  httpUpdate.onEnd(update_finished);//当升级结束时
-  httpUpdate.onProgress(update_progress);//当升级中
-  httpUpdate.onError(update_error);//当升级失败时
-  
-  t_httpUpdate_return ret = httpUpdate.update(UpdateClient, upUrl);
-  switch(ret) {
-    case HTTP_UPDATE_FAILED:      //当升级失败
-    toast = "FOTA升级失败";
-        Serial.println("[update] Update failed.");
-        break;
-    case HTTP_UPDATE_NO_UPDATES:  //当无升级
-     toast = "无FOTA升级";
-        Serial.println("[update] Update no Update.");
-        break;
-    case HTTP_UPDATE_OK:         //当升级成功
-      toast = "FOTA升级成功";
-        Serial.println("[update] Update ok.");
-        break;
-  }
-
-  //FOTA开始的通知 mqtt 小程序提示
-      
+    t_httpUpdate_return ret = httpUpdate.update(UpdateClient, upUrl);
+    switch(ret) {
+        case HTTP_UPDATE_FAILED:      //当升级失败
+            toast = "FOTA升级失败";
+            Serial.println("[update] Update failed.");
+            break;
+        case HTTP_UPDATE_NO_UPDATES:  //当无升级
+            toast = "无FOTA升级";
+            Serial.println("[update] Update no Update.");
+            break;
+        case HTTP_UPDATE_OK:         //当升级成功
+            toast = "FOTA升级成功";
+            Serial.println("[update] Update ok.");
+            break;
+    }      
 }
 
  
@@ -546,45 +538,44 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         httpResponseString.concat((char *)evt->data);
     }
     return ESP_OK;
-
 }
 
 /********推送图片*********/
 static esp_err_t take_send_photo() {
   
 
-  Serial.println("take_send_photo...");
-  camera_fb_t* fb = NULL;
-  esp_err_t res = ESP_OK;
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);//重复利用一个缓存？？？
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);//重复利用一个缓存？？？
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);//重复利用一个缓存？？？
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);//重复利用一个缓存？？？
+    Serial.println("take_send_photo...");
+    camera_fb_t* fb = NULL;
+    esp_err_t res = ESP_OK;
+    fb = esp_camera_fb_get();
+    esp_camera_fb_return(fb);//重复利用一个缓存？？？
+    fb = esp_camera_fb_get();
+    esp_camera_fb_return(fb);//重复利用一个缓存？？？
+    fb = esp_camera_fb_get();
+    esp_camera_fb_return(fb);//重复利用一个缓存？？？
+    fb = esp_camera_fb_get();
+    esp_camera_fb_return(fb);//重复利用一个缓存？？？
 
-  delay(50);
-  fb = esp_camera_fb_get();
+    delay(50);
+    fb = esp_camera_fb_get();
 
-  if (!fb) {
-    Serial.println("Camera capture failed...");
-    return ESP_FAIL;
-  }
+    if (!fb) {
+        Serial.println("Camera capture failed...");
+        return ESP_FAIL;
+    }
 
 
-  httpResponseString = "";
-  esp_http_client_handle_t http_client;
-  esp_http_client_config_t config_client = { 0 };
-  
-  // String urls = (post_url + fileName).c_str();
+    httpResponseString = "";
+    esp_http_client_handle_t http_client;
+    esp_http_client_config_t config_client = { 0 };
+
+    // String urls = (post_url + fileName).c_str();
 
     String nonce = utils.md5str(reporttime +'0'+ random(1000));
 
     int64_t signt= esp_timer_get_time(); //获取本地时间戳
     // printf("time cnt:%lld\r\n",signt); //打印时间戳
-    
+
     String did = utils.md5str(reporttime +'0'+ random(1000));
 
 
@@ -599,97 +590,86 @@ static esp_err_t take_send_photo() {
 
 
 
-const char * url = urls.c_str();
+    const char * url = urls.c_str();
 
-   Serial.println(url);
-  config_client.url = url;
-  config_client.event_handler = _http_event_handler;
-  config_client.method = HTTP_METHOD_POST;
-  http_client = esp_http_client_init(&config_client);
-  esp_http_client_set_post_field(http_client, (const char*)fb->buf, fb->len);  //设置http发送的内容和长度
-  esp_http_client_set_header(http_client, "Content-Type", "image/jpg");        //设置http头部字段
+    Serial.println(url);
+    config_client.url = url;
+    config_client.event_handler = _http_event_handler;
+    config_client.method = HTTP_METHOD_POST;
+    http_client = esp_http_client_init(&config_client);
+    esp_http_client_set_post_field(http_client, (const char*)fb->buf, fb->len);  //设置http发送的内容和长度
+    esp_http_client_set_header(http_client, "Content-Type", "image/jpg");        //设置http头部字段
 //   esp_http_client_set_header(http_client, "Authorization", uid.c_str());               //设置http头部字段
 //   esp_http_client_set_header(http_client, "Authtopic", topic);                 //设置http头部字段
 //   esp_http_client_set_header(http_client, "wechatmsg", wechatMsg);             //设置http头部字段
 //   esp_http_client_set_header(http_client, "wecommsg", wecomMsg);               //设置http头部字段
 //   esp_http_client_set_header(http_client, "picpath", urlPath);                 //设置http头部字段
-  esp_err_t err = esp_http_client_perform(http_client);                        //发送http请求
-  if (err == ESP_OK) {
-    Serial.println(httpResponseString);  //打印获取的URL
-    //json数据解析
-    StaticJsonDocument<200> doc;
-    DeserializationError error = deserializeJson(doc, httpResponseString);
-    if (error) {
-      Serial.print(F("deserializeJson() failed: "));
-      Serial.println(error.c_str());
-    }
-    boolean status = doc["status"];
-    if (status)
-    {
-        // mqtt_username
-        // SRCCID..'.' ..fileName
+    esp_err_t err = esp_http_client_perform(http_client);                        //发送http请求
+    if (err == ESP_OK) {
+        Serial.println(httpResponseString);  //打印获取的URL
+        //json数据解析
+        StaticJsonDocument<200> doc;
+        DeserializationError error = deserializeJson(doc, httpResponseString);
+        if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.c_str());
+        }
+        boolean status = doc["status"];
+        if (status)
+        {
+            // mqtt_username
+            // SRCCID..'.' ..fileName
 
-        // String sedStr = SRCCID+'.'+fileName;
-        String ss = SRCCID;
-        ss = ss +'.'+ fileName;
-        Serial.print(ss.c_str());
+            // String sedStr = SRCCID+'.'+fileName;
+            String ss = SRCCID;
+            ss = ss +'.'+ fileName;
+            Serial.print(ss.c_str());
 
-        StaticJsonDocument<1024> doc;
-        deserializeJson(doc, REPORT_PHOTO_TEMPLATE);
-       // setClock();
-        doc["cid"] = SRCCID;
-        doc["filename"] = fileName;
+            StaticJsonDocument<1024> doc;
+            deserializeJson(doc, REPORT_PHOTO_TEMPLATE);
+           // setClock();
+            doc["cid"] = SRCCID;
+            doc["filename"] = fileName;
 
-        doc["datatype"] = "dictionary";
-        doc["version"] = version;
-        doc["reporttime"] = reporttime;
+            doc["datatype"] = "dictionary";
+            doc["version"] = version;
+            doc["reporttime"] = reporttime;
 
                 
-        TimeStruct stc =  utils.setClock(SRCCID);
+            TimeStruct stc =  utils.setClock(SRCCID);
 
-    int64_t signt = stc.timeStamp ;
+            int64_t signt = stc.timeStamp ;
 
-       doc["signt"] = (signt *1000)  ;
-    String cidstr = SRCCID;
+            doc["signt"] = (signt *1000)  ;
+            String cidstr = SRCCID;
     
-    String did = utils.md5str(reporttime +'0'+ random(1000));
-        doc["did"] =  did;
+            String did = utils.md5str(reporttime +'0'+ random(1000));
+            doc["did"] =  did;
 
-
-
-
-
+            lastphotofileName = fileName;
         
-        lastphotofileName = fileName;
-        
-        char  buffer[1024];
-        size_t n = serializeJson(doc, buffer);
-        Serial.println(buffer);
+            char  buffer[1024];
+            size_t n = serializeJson(doc, buffer);
+            Serial.println(buffer);
 
-// const char *mqtt_pub_topic = mqtt_pub_topicsss.c_str();
+            // const char *mqtt_pub_topic = mqtt_pub_topicsss.c_str();
 
-        if (mqttclient.publish( mqtt_pub_topicsss.c_str(), buffer,n)) {
-            Serial.printf("auto topic photo [%s] ok\n",  mqtt_pub_topicsss.c_str());
+            if (mqttclient.publish( mqtt_pub_topicsss.c_str(), buffer,n)) {
+                Serial.printf("auto topic photo [%s] ok\n",  mqtt_pub_topicsss.c_str());
             
-        } else {
-            Serial.printf("auto topic photo [%s] fail\n",  mqtt_pub_topicsss.c_str());
-        }
+            } else {
+                Serial.printf("auto topic photo [%s] fail\n",  mqtt_pub_topicsss.c_str());
+            }
 
     }
-    
-
-
-    // Serial.println(doc);  //打印获取的URL
   }
 
-  Serial.println("Taking picture END");
-  esp_camera_fb_return(fb);
-  esp_http_client_cleanup(http_client);
+    Serial.println("Taking picture END");
+    esp_camera_fb_return(fb);
+    esp_http_client_cleanup(http_client);
 
-
-  return res;
+    return res;
 }
-
 
 
 // 获取通道ID和设置流媒体
@@ -710,20 +690,17 @@ void cmd_GPIO_Init(){
     pinMode(rc1,OUTPUT);
     digitalWrite(rc1, LOW);
 
-        pinMode(rc2,OUTPUT);
+    pinMode(rc2,OUTPUT);
     digitalWrite(rc2, LOW);
 
-        pinMode(rc3,OUTPUT);
+    pinMode(rc3,OUTPUT);
     digitalWrite(rc3, LOW);
 
-        pinMode(rc4,OUTPUT);
+    pinMode(rc4,OUTPUT);
     digitalWrite(rc4, LOW);
 }
 
-
-
-
-// 10s自动上传报文
+// 10s自动上报数据
 void autoDataStatus(){
     unsigned char rc1_status = digitalRead(rc1) ;
     unsigned char rc2_status = digitalRead(rc2) ;
@@ -777,16 +754,15 @@ void autoDataStatus(){
     doc["did"] =   did;
 
 
-
-     char  buffer[1024];
-     size_t n = serializeJson(doc, buffer);
+    char  buffer[1024];
+    size_t n = serializeJson(doc, buffer);
   
     Serial.println(buffer);
 
     const char *mqtt_pub_topic = mqtt_pub_topicsss.c_str();
     if (mqttclient.publish( mqtt_pub_topicsss.c_str(),buffer,n)) {
         Serial.printf("auto topic [%s] ok\n",  mqtt_pub_topicsss.c_str());
-                restartCount = 0;
+        restartCount = 0;
 
     } else {
         Serial.printf("auto topic [%s] fail\n",  mqtt_pub_topicsss.c_str());
@@ -795,39 +771,31 @@ void autoDataStatus(){
         //三次错误，就直接重启设备
         if (restartCount >=3)
         {
-          alarmLevel = 3;
-          restartCount = 0;
-          Serial.printf("restarxxx3");
-          // esp_restartFlag = true;//继续联网别重启
+            alarmLevel = 3;
+            restartCount = 0;
+            Serial.printf("restarxxx3");
+            // esp_restartFlag = true;//继续联网别重启
         }
     }
 
 }
 
-//中断服务函数
+// 中断服务函数
 void tim1Interrupt()
 {
-    // Serial.println("void tim1Interrupt()");
-
     if (videoUploadFlag)
     {
         tim1_IRQ_count++;
     }else{
         
-         tim1_IRQ_count = 0;
-         tim1_Photo_count++;
+        tim1_IRQ_count = 0;
+        tim1_Photo_count++;
     }
-    
-   
-
     timerAlarmEnabled(tim1);
-
     autoUploadFlag = true;
-
-
 }
 
-//定时器初始化
+// 定时器初始化
 void timerInit(){
 
   tim1 = timerBegin(0, 80, true);
@@ -837,12 +805,12 @@ void timerInit(){
   
 }
 
-// 0级别
+// 0级别--告警关闭
 void alarm_close(){
     digitalWrite(alarm,LOW);
 }
 
-// 1级别
+// 1级别--告警
 void alarm_low(){
 
     digitalWrite(alarm,HIGH);
@@ -851,7 +819,7 @@ void alarm_low(){
     delay(200);
 
 }
-// 2级别
+// 2级别--告警
 void alarm_medium(){
 
     digitalWrite(alarm,HIGH);
@@ -861,7 +829,7 @@ void alarm_medium(){
 
 }
 
-// 3级别
+// 3级别--告警
 void alarm_height(){
     digitalWrite(alarm,HIGH);
 }
@@ -869,25 +837,26 @@ void alarm_height(){
 // 告警执行
 void alarmAction(){
 
-  switch (alarmLevel)
-  {
-  case 3:
-     alarm_height();
-    break;
-  case 2://wifi断开
-     alarm_medium();
-    break;
-  case 1://4路继电器打开
-     alarm_low();
-    break;
-  case 0://4路继电器打开
-     alarm_close();
-    break;
-  default:
-    break;
-  }
+    switch (alarmLevel)
+    {
+        case 3:
+            alarm_height();
+            break;
+        case 2://wifi断开
+            alarm_medium();
+            break;
+        case 1://4路继电器打开
+            alarm_low();
+            break;
+        case 0://4路继电器打开
+            alarm_close();
+            break;
+        default:
+            break;
+    }
 
 }
+
 //远控停止控制上传video
 void videoUploadStop(){
     videoUploadFlag = false;
@@ -907,9 +876,8 @@ void videoUploadBegin(){
 }
 
 
-//自动化执行  10*1024内存 20条指令
+// 自动化任务执行  10*1024内存 20条指令
 void combinemonitorFunc(JsonArray cmdcombine){
-
 
     String demand_and= "demand_and";
     String demand_or= "demand_or";
@@ -1331,25 +1299,15 @@ void combinemonitorFunc(JsonArray cmdcombine){
                     // 跳出当前这一个执行，进行下一个判断
                     break;
                 }
-
-
-
             }
 
-
-
         }else{
-                   Serial.printf("autotype err:%s" , autotype);
+            Serial.printf("autotype err:%s" , autotype);
             Serial.println("-");
 
         }
 
-
-
     }
-
-
-
 } 
 
 //一键执行  2*1024内存 20条指令
@@ -1358,9 +1316,9 @@ void combinecontrollFunc(JsonArray cmdcombine){
     String exe_controll= "exe_controll";
     String exe_delay= "exe_delay";
 
-     Serial.println("combinecontroll begin");
-     Serial.println(cmdcombine.size());
-     Serial.println("combinecontroll end");
+    Serial.println("combinecontroll begin");
+    Serial.println(cmdcombine.size());
+    Serial.println("combinecontroll end");
 
     // JsonArray array = doc.as<JsonArray>();
     for(JsonObject dict : cmdcombine) {
@@ -1385,88 +1343,85 @@ void combinecontrollFunc(JsonArray cmdcombine){
                 }else{}
 
             }else if (sensorname == "rc2"){
-                  if(sensorcmd == "open")
-                    {
+                if(sensorcmd == "open")
+                {
                         digitalWrite(rc2,HIGH);
 
-                    }else if(sensorcmd == "close")
-                    {
+                }else if(sensorcmd == "close")
+                {
                         digitalWrite(rc2,LOW);
 
-                    }else{
-                    }
+                }else{
+                }
 
             }else if (sensorname == "rc3"){
-                  if(sensorcmd == "open")
-                    {
-                        digitalWrite(rc3,HIGH);
+                if(sensorcmd == "open")
+                {
+                    digitalWrite(rc3,HIGH);
 
-                    }else if(sensorcmd == "close")
-                    {
-                        digitalWrite(rc3,LOW);
+                }else if(sensorcmd == "close")
+                {
+                    digitalWrite(rc3,LOW);
 
-                    }else{
-                    }
+                }else{
+                }
 
             }else if (sensorname == "rc4"){
-                  if(sensorcmd == "open")
-                    {
-                        digitalWrite(rc4,HIGH);
+                if(sensorcmd == "open")
+                {
+                    digitalWrite(rc4,HIGH);
 
-                    }else if(sensorcmd == "close")
-                    {
-                        digitalWrite(rc4,LOW);
+                }else if(sensorcmd == "close")
+                {
+                    digitalWrite(rc4,LOW);
 
-                    }else{
-                    }
+                }else{
+                }
 
             }else if (sensorname == "alarm"){
-                  if(sensorcmd == "open")
-                    {
-                        digitalWrite(alarm,HIGH);
+                if(sensorcmd == "open")
+                {
+                    digitalWrite(alarm,HIGH);
 
-                    }else if(sensorcmd == "close")
-                    {
-                        digitalWrite(alarm,LOW);
+                }else if(sensorcmd == "close")
+                {
+                    digitalWrite(alarm,LOW);
 
-                    }else{
-                    }
+                }else{
+                }
 
             }else if (sensorname == "exe_alarm1"){
-                  if(sensorcmd == "open")
-                    {
-                        digitalWrite(alarm,HIGH);
-                        delay(100);
-                        digitalWrite(alarm,LOW);
-
-
-                    }else if(sensorcmd == "close")
-                    {
-                        digitalWrite(alarm,LOW);
-
-                    }else{
-                    }
+                if(sensorcmd == "open")
+                {
+                    digitalWrite(alarm,HIGH);
+                    delay(100);
+                    digitalWrite(alarm,LOW);
+                }else if(sensorcmd == "close")
+                {
+                    digitalWrite(alarm,LOW);
+                }else{
+                }
 
             }else if (sensorname == "exe_alarm2"){
-                  if(sensorcmd == "open")
-                    {
-                        digitalWrite(alarm,HIGH);
-                        delay(100);
-                        digitalWrite(alarm,LOW);
-                        delay(100);
-                      digitalWrite(alarm,HIGH);
-                        delay(100);
-                        digitalWrite(alarm,LOW);
+                if(sensorcmd == "open")
+                {
+                    digitalWrite(alarm,HIGH);
+                    delay(100);
+                    digitalWrite(alarm,LOW);
+                    delay(100);
+                    digitalWrite(alarm,HIGH);
+                    delay(100);
+                    digitalWrite(alarm,LOW);
 
-                    }else if(sensorcmd == "close")
-                    {
-                        digitalWrite(alarm,LOW);
+                }else if(sensorcmd == "close")
+                {
+                    digitalWrite(alarm,LOW);
 
-                    }else{
-                    }
+                }else{
+                }
 
             }else{
-                 Serial.println("unknown sensorname");
+                Serial.println("unknown sensorname");
 
             }
 
@@ -1484,6 +1439,7 @@ void combinecontrollFunc(JsonArray cmdcombine){
 
 } 
 
+// 平台下发的远控指令-回调
 void callback(char* topic, byte* payload, unsigned int length)
 {
     Serial.println(topic);    
@@ -1528,7 +1484,7 @@ void callback(char* topic, byte* payload, unsigned int length)
             if (sensorcmd == "open")
             {
                 Serial.println("takephoto");
-                 autoTakePhotoFlag = true;
+                autoTakePhotoFlag = true;
                 
             }else{
                 Serial.println(sensorcmd);
@@ -1536,7 +1492,7 @@ void callback(char* topic, byte* payload, unsigned int length)
         }else if (sensorname == "camera")
         {
             Serial.println("camera");
-             if(sensorcmd == "open")
+            if(sensorcmd == "open")
             {
                 Serial.println("open");
                 cameraFlag = true;
@@ -1548,284 +1504,282 @@ void callback(char* topic, byte* payload, unsigned int length)
                 Serial.println("close");
                 cameraFlag = false;
                 autoUploadFlag = true;
-                 videoUploadStop();
+                videoUploadStop();
 
             }else{
                 Serial.println(sensorcmd);
             }
         }else if (sensorname == "rc1"){
-             Serial.println(sensorname);
-              if(sensorcmd == "open")
-                {
-                    Serial.println("open");
-                    digitalWrite(rc1,HIGH);
-                      autoUploadFlag = true;
+            Serial.println(sensorname);
+            if(sensorcmd == "open")
+            {
+                Serial.println("open");
+                digitalWrite(rc1,HIGH);
+                autoUploadFlag = true;
 
-                }else if(sensorcmd == "close")
-                {
-                    Serial.println("close");
-                    digitalWrite(rc1,LOW);
-                      autoUploadFlag = true;
+            }else if(sensorcmd == "close")
+            {
+                Serial.println("close");
+                digitalWrite(rc1,LOW);
+                autoUploadFlag = true;
 
-                }else{
-                    Serial.println(sensorcmd);
-                }
+            }else{
+                Serial.println(sensorcmd);
+            }
 
         }else if (sensorname == "rc2"){
-             Serial.println(sensorname);
-              if(sensorcmd == "open")
-                {
-                    Serial.println("open");
-                    digitalWrite(rc2,HIGH);
-                      autoUploadFlag = true;
+            Serial.println(sensorname);
+            if(sensorcmd == "open")
+            {
+                Serial.println("open");
+                digitalWrite(rc2,HIGH);
+                autoUploadFlag = true;
 
-                }else if(sensorcmd == "close")
-                {
-                    Serial.println("close");
-                    digitalWrite(rc2,LOW);
-                      autoUploadFlag = true;
+            }else if(sensorcmd == "close")
+            {
+                Serial.println("close");
+                digitalWrite(rc2,LOW);
+                autoUploadFlag = true;
 
-                }else{
-                    Serial.println(sensorcmd);
-                }
+            }else{
+                Serial.println(sensorcmd);
+            }
 
         }else if (sensorname == "rc3"){
-             Serial.println(sensorname);
-              if(sensorcmd == "open")
-                {
-                    Serial.println("open");
-                    digitalWrite(rc3,HIGH);
-                      autoUploadFlag = true;
+            Serial.println(sensorname);
+            if(sensorcmd == "open")
+            {
+                Serial.println("open");
+                digitalWrite(rc3,HIGH);
+                autoUploadFlag = true;
 
-                }else if(sensorcmd == "close")
-                {
-                    Serial.println("close");
-                    digitalWrite(rc3,LOW);
-                      autoUploadFlag = true;
+            }else if(sensorcmd == "close")
+            {
+                Serial.println("close");
+                digitalWrite(rc3,LOW);
+                autoUploadFlag = true;
 
-                }else{
-                    Serial.println(sensorcmd);
-                }
+            }else{
+                Serial.println(sensorcmd);
+            }
 
         }else if (sensorname == "rc4"){
-             Serial.println(sensorname);
-              if(sensorcmd == "open")
-                {
-                    Serial.println("open");
-                    digitalWrite(rc4,HIGH);
-                      autoUploadFlag = true;
+            Serial.println(sensorname);
+          if(sensorcmd == "open")
+            {
+                Serial.println("open");
+                digitalWrite(rc4,HIGH);
+                autoUploadFlag = true;
 
-                }else if(sensorcmd == "close")
-                {
-                    Serial.println("close");
-                    digitalWrite(rc4,LOW);
-                      autoUploadFlag = true;
+            }else if(sensorcmd == "close")
+            {
+                Serial.println("close");
+                digitalWrite(rc4,LOW);
+                autoUploadFlag = true;
 
-                }else{
-                    Serial.println(sensorcmd);
-                }
+            }else{
+                Serial.println(sensorcmd);
+            }
 
         }else if (sensorname == "alarm"){
-             Serial.println(sensorname);
-              if(sensorcmd == "open")
-                {
-                    Serial.println("open");
-                    alarmLevel = 3;
-                    // digitalWrite(alarm,HIGH);
-                      autoUploadFlag = true;
+            Serial.println(sensorname);
+            if(sensorcmd == "open")
+            {
+                Serial.println("open");
+                alarmLevel = 3;
+                // digitalWrite(alarm,HIGH);
+                autoUploadFlag = true;
 
-                }else if(sensorcmd == "close")
-                {
-                    Serial.println("close");
-                    alarmLevel = 0;
-                    // digitalWrite(alarm,LOW);
-                      autoUploadFlag = true;
+            }else if(sensorcmd == "close")
+            {
+                Serial.println("close");
+                alarmLevel = 0;
+                // digitalWrite(alarm,LOW);
+                autoUploadFlag = true;
 
-                }else{
-                    Serial.println(sensorcmd);
-                }
+            }else{
+                Serial.println(sensorcmd);
+            }
 
         }else if (sensorname == "ac"){//控制空调
-             Serial.println(sensorname);
-              if(sensorcmd == "open")
+            Serial.println(sensorname);
+            if(sensorcmd == "open")
+            {
+                Serial.println("open");
+
+                uint8_t ac_mode = 1;//制热制冷-1制冷 4制热
+                
+                String ac_action = "";//下发的命令
+                String ac_action_cmd = "";//调高
+
+                // 空调的扩展指令 Temp温度 Mode加热/制冷--默认制冷 Fan风力--默认5auto
+                auto  extdata = cmddata["extdata"];
+
+                if (extdata.containsKey("mode")) {
+                    ac_mode = extdata["mode"];//制热制冷-1制冷 4制热
+                } else {
+                  Serial.println("mode does not exist");
+                }
+
+                if (extdata.containsKey("fan")) {
+                    ac_fan = extdata["fan"];//风力 5auto默认  3low 2 med 1high
+                }  else {
+                  Serial.println("fan does not exist");
+                }
+
+                if (extdata.containsKey("temp")) {
+                    ac_temp =  extdata["temp"];//温度
+                }  else {
+                  Serial.println("temp does not exist");
+                }
+                
+                //扩展指令类型 action 用于判断指令具体作用是 调整还是打开 
+                if (extdata.containsKey("action")) {
+                    String ac_actioncc =  extdata["action"];
+                    ac_action = (String)ac_actioncc;
+                }  else {
+                  Serial.println("action does not exist");
+                }
+
+                if (extdata.containsKey("action_cmd")) {
+                    String ac_action_cmdcc =  extdata["action_cmd"];
+                    ac_action_cmd = (String)ac_action_cmdcc;
+
+                }  else {
+                  Serial.println("action_cmd does not exist");
+                }
+
+                Serial.println("ac_mode:"+ ac_mode);
+                Serial.println("ac_fan:"+ ac_fan);
+                Serial.println("ac_temp:"+ ac_temp);
+                Serial.println("ac_action:"+ ac_action);
+                Serial.println("ac_action_cmd:"+ ac_action_cmd);
+                    
+
+                //打开和修改都公用的指令
+
+                // 参数方式
+                //打开空调-默认
+                haier_ac.on();
+                //设置模式  (1) V9014557 Remote in "A" setting. (Default)
+                haier_ac.setModel(V9014557_A);
+                // setPower
+                haier_ac.setPower(1);
+                //设置按钮 5是电源
+                haier_ac.setButton(5);
+                //制热制冷-1制冷 4制热
+                haier_ac.setMode(ac_mode);
+                //设置温度
+                haier_ac.setTemp(ac_temp);
+                // 设置风扇 风力 5auto默认  3low 2 med 1high
+                haier_ac.setFan(ac_fan);
+
+                //设置强劲模式(涡轮增压) 若传入的是on则Quiet = false;
+                haier_ac.setTurbo(false);
+                //设置静音 若传入的是on则 Turbo = false;
+                haier_ac.setQuiet(false);
+
+                //垂直摆动模式 Set the Vertical Swing mode of the A/C.
+                haier_ac.setSwingV(2);//Middle 2
+                // 水平摆动模式 Set the Horizontal Swing mode of the A/C.
+                haier_ac.setSwingH(0);//Middle 0
+                // Set the Sleep setting of the A/C.
+                haier_ac.setSleep(false);
+                // Set the Health (filter) setting of the A/C.
+                haier_ac.setHealth(true);
+
+                //设置定时开启/关闭空调 Set the Timer operating mode.  0关闭
+                haier_ac.setTimerMode(0);
+                //设置开启时间 Set the number of minutes of the On Timer setting.
+                /// @param[in] mins Nr. of Minutes for the Timer. `0` means disable the timer.
+                haier_ac.setOnTimer(0);
+                //设置关闭时间 Set the number of minutes of the Off Timer setting.
+                // @param[in] mins Nr. of Minutes for the Timer. `0` means disable the timer.
+                haier_ac.setOffTimer(0);
+
+                //设置锁定 Set the Lock setting of the A/C.
+                haier_ac.setLock(false); 
+
+
+                //进行调整空调文档数据  根据扩展指令中的action字段，判断是：后续调整、第一次打开
+                if (ac_action == "change")
                 {
-                    Serial.println("open");
+                    Serial.println("change okxxxxxxxxxxxxx");
 
-                    uint8_t ac_mode = 1;//制热制冷-1制冷 4制热
-                    
-                    String ac_action = "";//下发的命令
-                    String ac_action_cmd = "";//调高
-
-                    // 空调的扩展指令 Temp温度 Mode加热/制冷--默认制冷 Fan风力--默认5auto
-                    auto  extdata = cmddata["extdata"];
-
-                    if (extdata.containsKey("mode")) {
-                        ac_mode = extdata["mode"];//制热制冷-1制冷 4制热
-                    } else {
-                      Serial.println("mode does not exist");
-                    }
-
-                    if (extdata.containsKey("fan")) {
-                        ac_fan = extdata["fan"];//风力 5auto默认  3low 2 med 1high
-                    }  else {
-                      Serial.println("fan does not exist");
-                    }
-
+                    // 如果有temp fan直接使用此值，如果没有temp则直接进行加/减1
                     if (extdata.containsKey("temp")) {
-                        ac_temp =  extdata["temp"];//温度
-                    }  else {
-                      Serial.println("temp does not exist");
-                    }
-                    
-                    //扩展指令类型 action 用于判断指令具体作用是 调整还是打开 
-                    if (extdata.containsKey("action")) {
-                        String ac_actioncc =  extdata["action"];
-                        ac_action = (String)ac_actioncc;
-                    }  else {
-                      Serial.println("action does not exist");
-                    }
+                        Serial.println("temp is exist 不需要操作 ");
+                    }  else if (extdata.containsKey("fan")) {
+                        Serial.println("fan is exist 不需要操作 ");
+                    }  else{
+                        //本地记时间，进行加减操作
+                        Serial.println("temp does not exist");
+                        if (ac_action_cmd == "temp_height")
+                        {
+                        Serial.println("height okxxxxxxxxxxxxx");
 
-                    if (extdata.containsKey("action_cmd")) {
-                        String ac_action_cmdcc =  extdata["action_cmd"];
-                        ac_action_cmd = (String)ac_action_cmdcc;
+                          haier_ac.setButton(0); //0 是新增  1是减少
+                            // ac_temp =  haier_ac.getTemp();  
+                            //设置温度
+                            ac_temp = ac_temp + 1;
+                            haier_ac.setTemp(ac_temp);                          
+                        }else if (ac_action_cmd == "temp_low") {
 
-                    }  else {
-                      Serial.println("action_cmd does not exist");
-                    }
+                          Serial.println("low okxxxxxxxxxxxxx");
+                          haier_ac.setButton(1); //0 是新增  1是减少
+                            // ac_temp =  haier_ac.getTemp();  
+                            //设置温度
+                            ac_temp = ac_temp - 1;
+                            haier_ac.setTemp(ac_temp); 
+                        }else if (ac_action_cmd == "fan_height") {  //风力三个档位 3最小 2居中 1最大
 
-                    Serial.println("ac_mode:"+ ac_mode);
-                    Serial.println("ac_fan:"+ ac_fan);
-                    Serial.println("ac_temp:"+ ac_temp);
-                    Serial.println("ac_action:"+ ac_action);
-                    Serial.println("ac_action_cmd:"+ ac_action_cmd);
-                    
+                          Serial.println("low okxxxxxxxxxxxxx");
+                          if (ac_fan == 5 )//自动模式
+                          {
+                            ac_fan = 3;
+                          }else if (ac_fan == 3)
+                          {
+                            ac_fan = 2;
+                          }else if (ac_fan == 2)
+                          {
+                            ac_fan = 1;
+                          }else  
+                          {
+                            ac_fan = 1;//最大
+                          }
+                          
+                          haier_ac.setFan(ac_fan); //3最小 2居中 1最大
 
-                    //打开和修改都公用的指令
+                        }else if (ac_action_cmd == "fan_low") {
 
-                        // 参数方式
-                        //打开空调-默认
-                        haier_ac.on();
-                        //设置模式  (1) V9014557 Remote in "A" setting. (Default)
-                        haier_ac.setModel(V9014557_A);
-                        // setPower
-                        haier_ac.setPower(1);
-                        //设置按钮 5是电源
-                        haier_ac.setButton(5);
-                        //制热制冷-1制冷 4制热
-                        haier_ac.setMode(ac_mode);
-                        //设置温度
-                        haier_ac.setTemp(ac_temp);
-                        // 设置风扇 风力 5auto默认  3low 2 med 1high
-                        haier_ac.setFan(ac_fan);
+                          Serial.println("low okxxxxxxxxxxxxx");
+                           if (ac_fan == 1 )
+                          {
+                            ac_fan = 2;
+                          }else if (ac_fan == 2)
+                          {
+                            ac_fan = 3;
+                          }else if (ac_fan == 3)
+                          {
+                            ac_fan = 5;
+                          }else  
+                          {
+                            ac_fan = 5;//自动模式
+                          }
+                          
+                          haier_ac.setFan(ac_fan); //3最小 2居中 1最大
 
-                        //设置强劲模式(涡轮增压) 若传入的是on则Quiet = false;
-                        haier_ac.setTurbo(false);
-                        //设置静音 若传入的是on则 Turbo = false;
-                        haier_ac.setQuiet(false);
-
-                        //垂直摆动模式 Set the Vertical Swing mode of the A/C.
-                        haier_ac.setSwingV(2);//Middle 2
-                        // 水平摆动模式 Set the Horizontal Swing mode of the A/C.
-                        haier_ac.setSwingH(0);//Middle 0
-                        // Set the Sleep setting of the A/C.
-                        haier_ac.setSleep(false);
-                        // Set the Health (filter) setting of the A/C.
-                        haier_ac.setHealth(true);
-
-                        //设置定时开启/关闭空调 Set the Timer operating mode.  0关闭
-                        haier_ac.setTimerMode(0);
-                        //设置开启时间 Set the number of minutes of the On Timer setting.
-                        /// @param[in] mins Nr. of Minutes for the Timer. `0` means disable the timer.
-                        haier_ac.setOnTimer(0);
-                        //设置关闭时间 Set the number of minutes of the Off Timer setting.
-                        // @param[in] mins Nr. of Minutes for the Timer. `0` means disable the timer.
-                        haier_ac.setOffTimer(0);
-
-                        //设置锁定 Set the Lock setting of the A/C.
-                        haier_ac.setLock(false); 
-
-
-                    //进行调整空调文档数据  根据扩展指令中的action字段，判断是：后续调整、第一次打开
-                    if (ac_action == "change")
-                    {
-                        Serial.println("change okxxxxxxxxxxxxx");
-
-                        // 如果有temp fan直接使用此值，如果没有temp则直接进行加/减1
-                        if (extdata.containsKey("temp")) {
-                            Serial.println("temp is exist 不需要操作 ");
-                        }  else if (extdata.containsKey("fan")) {
-                            Serial.println("fan is exist 不需要操作 ");
-                        }  else{
-                            //本地记时间，进行加减操作
-                            Serial.println("temp does not exist");
-                            if (ac_action_cmd == "temp_height")
-                            {
-                            Serial.println("height okxxxxxxxxxxxxx");
-
-                              haier_ac.setButton(0); //0 是新增  1是减少
-                                // ac_temp =  haier_ac.getTemp();  
-                                //设置温度
-                                ac_temp = ac_temp + 1;
-                                haier_ac.setTemp(ac_temp);                          
-                            }else if (ac_action_cmd == "temp_low") {
-
-                              Serial.println("low okxxxxxxxxxxxxx");
-                              haier_ac.setButton(1); //0 是新增  1是减少
-                                // ac_temp =  haier_ac.getTemp();  
-                                //设置温度
-                                ac_temp = ac_temp - 1;
-                                haier_ac.setTemp(ac_temp); 
-                            }else if (ac_action_cmd == "fan_height") {  //风力三个档位 3最小 2居中 1最大
-
-                              Serial.println("low okxxxxxxxxxxxxx");
-                              if (ac_fan == 5 )//自动模式
-                              {
-                                ac_fan = 3;
-                              }else if (ac_fan == 3)
-                              {
-                                ac_fan = 2;
-                              }else if (ac_fan == 2)
-                              {
-                                ac_fan = 1;
-                              }else  
-                              {
-                                ac_fan = 1;//最大
-                              }
-                              
-                              haier_ac.setFan(ac_fan); //3最小 2居中 1最大
-
-                            }else if (ac_action_cmd == "fan_low") {
-
-                              Serial.println("low okxxxxxxxxxxxxx");
-                               if (ac_fan == 1 )
-                              {
-                                ac_fan = 2;
-                              }else if (ac_fan == 2)
-                              {
-                                ac_fan = 3;
-                              }else if (ac_fan == 3)
-                              {
-                                ac_fan = 5;
-                              }else  
-                              {
-                                ac_fan = 5;//自动模式
-                              }
-                              
-                              haier_ac.setFan(ac_fan); //3最小 2居中 1最大
-
-                            }
-                            
                         }
-                        Serial.println("send okxxxxxxxxxxxxx");
+                        
+                    }
+                    Serial.println("send okxxxxxxxxxxxxx");
 
-                        //最后 发送红外
-                        haier_ac.send();
+                    //最后 发送红外
+                    haier_ac.send();
 
                     }else if (ac_action == "open"){
                       //默认的打开空调
                         Serial.println("ac_action open okxxxxxxxxxxxxx");
-
-                      
 
                         // 发射指令
                         Serial.println("a power_on capture from IRrecvDumpV2");
@@ -1843,8 +1797,6 @@ void callback(char* topic, byte* payload, unsigned int length)
                         Serial.println("ac_action err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                     }
 
-
-
                     // 修改空调flag状态
                     ac = "open";
                     autoUploadFlag = true;
@@ -1857,7 +1809,7 @@ void callback(char* topic, byte* payload, unsigned int length)
                     haier_ac.off();
                     haier_ac.send();
                     ac = "close";
-                      autoUploadFlag = true;
+                    autoUploadFlag = true;
 
                 }else{
                     Serial.println(sensorcmd);
@@ -1896,21 +1848,21 @@ void callback(char* topic, byte* payload, unsigned int length)
 
             if(sensorcmd == "open") 
             {
-              updateversion = "";
-              updateurl = "";
+                updateversion = "";
+                updateurl = "";
 
 
-              Serial.println("open");
-              //  -- 远程更新FOTA
-              auto  extdata = cmddata["extdata"];
-              String updateurlCC= extdata["updateurl"];
-              updateurl = updateurlCC;
-              String updateversions =  extdata["updateversion"];
-              Serial.println(updateurl +":"+ updateversions);
-              updateversion = updateversions;
+                Serial.println("open");
+                //  -- 远程更新FOTA
+                auto  extdata = cmddata["extdata"];
+                String updateurlCC= extdata["updateurl"];
+                updateurl = updateurlCC;
+                String updateversions =  extdata["updateversion"];
+                Serial.println(updateurl +":"+ updateversions);
+                updateversion = updateversions;
 
-               fotaFlag = true;
-               fota_status = 1;
+                fotaFlag = true;
+                fota_status = 1;
 
             }else{
                 Serial.println(sensorcmd);
@@ -1985,11 +1937,11 @@ void callback(char* topic, byte* payload, unsigned int length)
     // 返回远控的ACK消息
     if (cmdType != cmd_statusack && cmdType != cmd_status)
     {
-       StaticJsonDocument<1024> docack;
+        StaticJsonDocument<1024> docack;
         deserializeJson(docack, REPORT_CONTROLLACK_TEMPLATE);
-           TimeStruct stc =  utils.setClock(SRCCID);
-          reporttime = stc.reporttime;
-          fileName = stc.fileName;
+        TimeStruct stc =  utils.setClock(SRCCID);
+        reporttime = stc.reporttime;
+        fileName = stc.fileName;
 
         docack["did"] =  did;
         docack["datatype"] =  "dictionary";
@@ -1998,9 +1950,6 @@ void callback(char* topic, byte* payload, unsigned int length)
         docack["reporttime"] = reporttime;
         docack["version"] = version;
 
-
-        
-       
         int64_t timer1_cnt=esp_timer_get_time(); //获取本地时间戳
         // printf("time cnt:%lld\r\n",timer1_cnt); //打印时间戳
 
@@ -2010,7 +1959,6 @@ void callback(char* topic, byte* payload, unsigned int length)
         
         char  buffer[1024];
         size_t n = serializeJson(docack, buffer);
-        // Serial.println(buffer);
 
         // const char *mqtt_pub_topic = mqtt_pub_topicsss.c_str();
         if (mqttclient.publish( mqtt_pub_topicsss.c_str(), buffer,n)) {
@@ -2101,6 +2049,7 @@ void setup_camera(){
 //     rtc_wdt_set_time(RTC_WDT_STAGE0, 30000); // 设置看门狗超时 8000ms.则reset重启
 // }
 
+
 #include <esp32-hal.h>
 #include <lwip/apps/sntp.h>
 #include <stdarg.h>
@@ -2133,14 +2082,14 @@ void set_time(const char *const posix_tz, const int server_cnt,const char* serve
 }
 
 
-
+// 屏幕初始化
 void tft_setup(){
     tft.init();
     tft.setRotation(1);
 
 }
 
-
+// 屏幕显示
 void ftf_display()
 {
  
@@ -2216,43 +2165,42 @@ void ftf_display()
    
 }
 
+// 子线程刷新屏幕
 void  TaskDisplay(void *param){
 
-  uint32_t blink_delay = 900;
-// for死循环
-  while (1)
-  {
-    
-    delay(blink_delay);
-    unsigned char rc1_status = digitalRead(rc1) ;
-    unsigned char rc2_status = digitalRead(rc2) ;
-    unsigned char rc3_status = digitalRead(rc3) ;
-    unsigned char rc4_status = digitalRead(rc4) ;
-    unsigned char alarm_status = digitalRead(alarm) ;
-  
-    uint c_temp = 1.0*((int)(dht11.Temp*10))/10 + 1.0*dht11.Temp_small/10;
-    uint c_humi = 1.0*((int)(dht11.Humi*10))/10 + 1.0*dht11.Humi_small/10;
-
-    uint  c_airc =   1.0*((int)(getVoltage(gasSensor)*10))/10;
-   
-   
-    // 空气质量值变化，马上上报
-    if ( c_airc != old_airc )
+    uint32_t blink_delay = 900;
+    while (1)
     {
-      autoUploadFlag = true;
-    }
-
-    old_airc = c_airc;
-
-     // 温湿度值变化，马上上报
-      if (  old_temp != c_temp  || old_humi != c_humi)
-      {
-        autoUploadFlag = true;
-      }
+    
+        delay(blink_delay);
+        unsigned char rc1_status = digitalRead(rc1) ;
+        unsigned char rc2_status = digitalRead(rc2) ;
+        unsigned char rc3_status = digitalRead(rc3) ;
+        unsigned char rc4_status = digitalRead(rc4) ;
+        unsigned char alarm_status = digitalRead(alarm) ;
       
-      old_temp = c_temp;
-      old_humi = c_humi;
+        uint c_temp = 1.0*((int)(dht11.Temp*10))/10 + 1.0*dht11.Temp_small/10;
+        uint c_humi = 1.0*((int)(dht11.Humi*10))/10 + 1.0*dht11.Humi_small/10;
 
+        uint  c_airc =   1.0*((int)(getVoltage(gasSensor)*10))/10;
+   
+   
+        // 空气质量值变化，马上上报
+        if ( c_airc != old_airc )
+        {
+            autoUploadFlag = true;
+        }
+
+        old_airc = c_airc;
+
+        // 温湿度值变化，马上上报
+        if (  old_temp != c_temp  || old_humi != c_humi)
+        {
+            autoUploadFlag = true;
+        }
+      
+        old_temp = c_temp;
+        old_humi = c_humi;
 
 
     // 设备有打开任何外设时，设备进行告警播报1S一次
@@ -2265,63 +2213,65 @@ void  TaskDisplay(void *param){
     // }
     
     
-    old_rc1 = rc1_status ? "I" : "O";
-    old_rc2 = rc2_status ? "I" : "O";
-    old_rc3 = rc3_status ? "I" : "O";
-    old_rc4 = rc4_status ? "I" : "O";
+        old_rc1 = rc1_status ? "I" : "O";
+        old_rc2 = rc2_status ? "I" : "O";
+        old_rc3 = rc3_status ? "I" : "O";
+        old_rc4 = rc4_status ? "I" : "O";
 
 
-   if (getCombinemonitorFlag)
-   {
-        getCombineAutoByCidHardware(SRCCID);
-
-   }
-   
-
-    // 监控实时数据
-   if (combineAutoArrFlag)
-   {
-    // Serial.println("--------------------------begin---------------------------");
-        if (demand_count>0)
+        if (getCombinemonitorFlag)
         {
-            deviceStatus = "demand [ " + (String)demand_count + " ]";
+            getCombineAutoByCidHardware(SRCCID);
+
         }
-        
+   
 
-        combinemonitorFunc(combineAutoArr);
-    // Serial.println("--------------------------end---------------------------");
+        // 监控实时数据
+       if (combineAutoArrFlag)
+       {
+        // Serial.println("--------------------------begin---------------------------");
+            if (demand_count>0)
+            {
+                deviceStatus = "demand [ " + (String)demand_count + " ]";
 
-   }
+            }else{
+                deviceStatus = "demand [ " + (String)demand_count + " ]";
+            }
+
+            combinemonitorFunc(combineAutoArr);
+        // Serial.println("--------------------------end---------------------------");
+
+       }
 
    
 
-    ftf_display();
-    alarmAction();
-  }
-  
-
-
-
+        ftf_display();
+        alarmAction();
+    }
 }
+
+
+
+
 void setup() {
-  // 屏幕初始化
 
-   tft_setup();
+    // 屏幕初始化
+    tft_setup();
 
-  xTaskCreate(
-    TaskDisplay       // 这个任务运行的函数
-    ,  "Task Display" //  给人看的名字
-    ,  8*1024        // 任务栈的大小，用于存储任务运行时的上下文信息。简单来说，就是最多存这么多信息
-    ,  NULL // 任务参数。要么没有填NULL；要么必须为无类型指针
-    ,  0  // 优先级
-    ,  NULL // 任务的句柄，用于管理和控制任务，NULL相当于0，意味着此处不需要任务句柄
+    xTaskCreate(
+        TaskDisplay       // 这个任务运行的函数
+        ,  "Task Display" //  给人看的名字
+        ,  8*1024        // 任务栈的大小，用于存储任务运行时的上下文信息。简单来说，就是最多存这么多信息
+        ,  NULL // 任务参数。要么没有填NULL；要么必须为无类型指针
+        ,  0  // 优先级
+        ,  NULL // 任务的句柄，用于管理和控制任务，NULL相当于0，意味着此处不需要任务句柄
     );
 
-  deviceStatus = "init Serial";
+    deviceStatus = "init Serial";
 
 
     // 红外发射初始化V2
-    // 必须一开始就初始化，不然红外灯发热厉害
+    // 必须一开始就初始化，不然红外灯发热厉害--引脚1不用就注销掉
     // haier_ac.begin();
 
 
@@ -2330,13 +2280,12 @@ void setup() {
     while (!Serial) {
         /* code */
     }
-  deviceStatus = "init GPIO";
-
+    deviceStatus = "init GPIO";
 
     cmd_GPIO_Init();
 
 
-  deviceStatus = "connect wifi";
+    deviceStatus = "connect wifi";
 
     
     // utils.setup_wifi(ssid, passwd);
@@ -2364,19 +2313,17 @@ void setup() {
     mqttclient.setKeepAlive(60);
     while (!mqttclient.connect(mqtt_mqttClientId.c_str(), mqtt_username.c_str(), mqtt_passwd.c_str())) {
         Serial.println("mqtt connect fail, reconnect");
-          deviceStatus = "mqtt connect err";
+        deviceStatus = "mqtt connect err";
 
-            int numNetworks = sizeof(wifiData) / sizeof(wifiData[0]);
-            utils.setup_wifi(wifiData, numNetworks);
+        int numNetworks = sizeof(wifiData) / sizeof(wifiData[0]);
+        utils.setup_wifi(wifiData, numNetworks);
 
     }
 
     Serial.println("mqtt connected!");
-    
     deviceStatus = "mqtt connected!";
 
     // sub topic
-
     boolean ret = mqttclient.subscribe(mqtt_sub_topicsss.c_str());
     if (ret != true) {
         Serial.printf("mqtt subscribe topic [%s] fail\n", mqtt_sub_topicsss.c_str());
@@ -2387,9 +2334,6 @@ void setup() {
     // wdt_init();
     // Serial.printf("wdt_init\n");
     
-
-
-
     //定时器
     timerInit();
 
@@ -2399,68 +2343,56 @@ void setup() {
 
 
 void reconnect() {
-      deviceStatus = "reconnect mqtt";
+    deviceStatus = "reconnect mqtt";
 
-  while (!mqttclient.connected()) {
+    while (!mqttclient.connected()) {
 
-      alarmLevel = 3; //告警
-      // alarmAction();
+        alarmLevel = 3; //告警
+        // alarmAction();
 
-// 重新打开wifi链接、
-    Serial.println("reset wifi ...");
+        // 重新打开wifi链接、
+        Serial.println("reset wifi ...");
     
-    int numNetworks = sizeof(wifiData) / sizeof(wifiData[0]);
-    utils.setup_wifi(wifiData, numNetworks);
+        int numNetworks = sizeof(wifiData) / sizeof(wifiData[0]);
+        utils.setup_wifi(wifiData, numNetworks);
 
     
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (mqttclient.connect(mqtt_mqttClientId.c_str(), mqtt_username.c_str(), mqtt_passwd.c_str())) {
-      Serial.println("connected");
-
-      alarmLevel = 0; //告警消除
+        Serial.print("Attempting MQTT connection...");
+        // Attempt to connect
+        if (mqttclient.connect(mqtt_mqttClientId.c_str(), mqtt_username.c_str(), mqtt_passwd.c_str())) {
+            Serial.println("connected");
+            alarmLevel = 0; //告警消除
+            // 连接成功时订阅主题
+            deviceStatus = "connect mqtt ok";
+            // const char *mqtt_sub_topic =  mqtt_sub_topicsss.c_str();
+            mqttclient.subscribe(mqtt_sub_topicsss.c_str());
+            autoUploadFlag = 1;
       
-      // 连接成功时订阅主题
-    deviceStatus = "connect mqtt ok";
+        } else {
 
-    // const char *mqtt_sub_topic =  mqtt_sub_topicsss.c_str();
-    mqttclient.subscribe(mqtt_sub_topicsss.c_str());
-
-    autoUploadFlag = 1;
-
-      
-    } else {
-
-      Serial.print("failed, rc=");
-      Serial.print(mqttclient.state());
-      Serial.println(" try again in 3 seconds");
-      // Wait 5 seconds before retrying
-      delay(3000);
+          Serial.print("failed, rc=");
+          Serial.print(mqttclient.state());
+          Serial.println(" try again in 3 seconds");
+          // Wait 5 seconds before retrying
+          delay(3000);
+        }
     }
-  }
 }
-
-
 
 
 /*MQ135空气质量检测传感器模块（有害物体 氨气 硫化物检测)
  程序之一
  */
-
 //   float voltage;  voltage = getVoltage(gasSensor);
-// 15往上报警
  float getVoltage(int pin){
 
   return (analogRead(pin) * 0.004882814); 
  }
 
 
-
-
 void loop() {
 
     Serial.println("do loop");
-
     camera_fb_t *fb = NULL;//拍照缓存
     size_t len;//拍照的数据字节长度
 
@@ -2468,7 +2400,7 @@ void loop() {
     {
 
         if (!mqttclient.connected()) {
-          //断网重来开始
+            //断网重来开始
             Serial.println("do loop 断网重连开始");
             reconnect();
         }
@@ -2479,20 +2411,16 @@ void loop() {
         // 是否FOTA
         if (fotaFlag)
         {
-          deviceStatus = "FOTA";
-
-          fotaFlag = false;
-          updateDevice(updateurl,updateversion);
-           
+            deviceStatus = "FOTA";
+            fotaFlag = false;
+            updateDevice(updateurl,updateversion);
         }
 
         // 是否上报设备状态 10s中断上报
         if (autoUploadFlag)
         {
             dht11 = utils.DHT11(); //读取温湿度
-
             // printf("Temp=%d.%d℃--Humi=%d.%d%%RH \r\n", Temp,Temp_small,Humi,Humi_small);
-
             autoUploadFlag = false;
             autoDataStatus();
         }
@@ -2500,11 +2428,10 @@ void loop() {
         if (autoTakePhotoFlag)//远程拍照
         { 
             autoTakePhotoFlag = false;
-                TimeStruct stc =  utils.setClock(SRCCID);
+            TimeStruct stc =  utils.setClock(SRCCID);
             reporttime = stc.reporttime;
             fileName = stc.fileName;
             setup_camera();
-            
             take_send_photo();
             desetup_camera();
             
@@ -2522,10 +2449,9 @@ void loop() {
         {
             if (videoUploadInitFlag)//没有初始化的时候，进行初始化，仅一次
             {
-              videoUploadInitFlag = false;
-              setup_camera();
-              getChanneAndSetStreamSender();
-              /* code */
+                videoUploadInitFlag = false;
+                setup_camera();
+                getChanneAndSetStreamSender();
             }
             
             // log_i("send image");
@@ -2543,7 +2469,6 @@ void loop() {
 
             for (size_t i = 0; i < srccitlent; i++)
             {
-              /* code */
                fb->buf[len+i] =SRCCID[i];
             }
             
@@ -2571,10 +2496,6 @@ void loop() {
             delay(200);
             esp_restart();
         }
-
-                        
-
-   
  
     }
 
